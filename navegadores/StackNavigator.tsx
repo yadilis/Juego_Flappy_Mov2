@@ -5,20 +5,19 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import TablaPuntuacion from '../screens/TablaPuntuacion';
-import PerfirUsuario from '../screens/PerfirUsuario';
+import PerfilUsuario from '../screens/PerfilUsuario';
+
 const Drawer = createDrawerNavigator()
+const Stack = createStackNavigator();
 function MyDrawer(){
     return(
-        <Drawer.Navigator initialRouteName='PerfirUsuario'>
+        <Drawer.Navigator initialRouteName='PerfilUsuario'>
             <Drawer.Screen name="TablaPuntuacion" component={TablaPuntuacion} />
-            <Drawer.Screen name="PerfirUsuario" component={PerfirUsuario} />
+            <Drawer.Screen name="PerfilUsuario" component={PerfilUsuario} />
         </Drawer.Navigator>
     )
 }
 
-
-export type RootStackParamList = {Welcome: undefined;Login: undefined;Game: undefined;Instructions: undefined; Drawer:undefined;};
-const Stack = createStackNavigator<RootStackParamList>();
 export default function Navegador() {
   return (
     <NavigationContainer>

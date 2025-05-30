@@ -114,18 +114,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleFakeLogin}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="large" />
-            ) : (
-              <Text style={styles.buttonText}>Iniciar Sesión</Text>
-            )}
+          <TouchableOpacity onPress={() => navigation.navigate('Drawer')}>
+          <Text style={styles.btn}>Iniciar Sesion</Text>
           </TouchableOpacity>
+
+          
 
           <TouchableOpacity
             onPress={() => navigation.navigate('Register')}
@@ -260,4 +253,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
   },
+  btn: {
+  backgroundColor: '#ff9800',
+  color: 'black',
+  paddingVertical: 12,
+  paddingHorizontal: 20,
+  borderRadius: 8,
+  textAlign: 'center',
+  fontSize: 16,
+  fontWeight: 'bold',
+},
+
 });
