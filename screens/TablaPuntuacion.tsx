@@ -37,16 +37,38 @@ export default function TablaPuntuacion() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  img: {
     flex: 1,
-    backgroundColor: 'rgba(25, 120, 230, 0.85)', 
+    resizeMode: 'cover',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(25, 120, 230, 0.85)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 30,
   },
+  container: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: '#ffc107', 
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    shadowColor: '#ffc107',
+    shadowOpacity: 0.85,
+    shadowRadius: 30,
+    elevation: 40,
+    marginVertical: 20,
+  },
   title: {
     fontSize: 36,
-    fontWeight: '900',
-    color: '#fff',
+    fontWeight: '600',
+    color: '#ff9800', 
     marginBottom: 30,
     fontFamily: 'Comic Sans MS',
     textShadowColor: '#ff6f00',
