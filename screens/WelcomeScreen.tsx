@@ -179,7 +179,7 @@ export default function WelcomeScreen({ navigation }:any) {
 
           <Animated.View style={{ transform: [{ scale: playScale }] }}>
          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("Login")}>
-        <Text style={styles.buttonText}>Jugar</Text>
+        <Text style={styles.buttonText}>Bienvenid@</Text>
       </TouchableOpacity>
           </Animated.View>
 
