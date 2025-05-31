@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, TextInput, TouchableOpacity, Text, StyleSheet,
-  ActivityIndicator, ImageBackground, Animated, Image
+  ActivityIndicator, ImageBackground, Animated, Image, Modal
 } from 'react-native';
 
 interface LoginScreenProps {
@@ -13,9 +13,11 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const modalScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const pulseAndRotate = Animated.loop(
@@ -49,9 +51,21 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     pulseAndRotate.start();
   }, []);
 
+  useEffect(() => {
+    if (successModalVisible) {
+      Animated.spring(modalScale, {
+        toValue: 1,
+        friction: 6,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      modalScale.setValue(0);
+    }
+  }, [successModalVisible]);
+
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-10deg', '10deg'],  // ligero balanceo para mayor dinamismo
+    outputRange: ['-10deg', '10deg'],  
   });
 
   const handleFakeLogin = () => {
@@ -63,14 +77,17 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      alert('¡Inicio de sesión simulado con éxito!');
-  
+      setSuccessModalVisible(true);
     }, 2000);
+  };
+
+  const closeModal = () => {
+    setSuccessModalVisible(false);
+    navigation.navigate('Drawer');
   };
 
   return (
     <ImageBackground
-   //   source={require('../assets/imagenes/fondo.jpg')} 
       style={styles.img}
       imageStyle={{ opacity: 0.9 }}
     >
@@ -113,11 +130,17 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity onPress={() => navigation.navigate('Drawer')}>
-          <Text style={styles.btn}>Iniciar Sesion</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleFakeLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#4a2700" />
+            ) : (
+              <Text style={styles.buttonText}>Iniciar Sesion</Text>
+            )}
           </TouchableOpacity>
-
-          
 
           <TouchableOpacity
             onPress={() => navigation.navigate('Registro')}
@@ -134,6 +157,23 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Modal de éxito */}
+      <Modal
+        transparent
+        visible={successModalVisible}
+        animationType="fade"
+        onRequestClose={() => setSuccessModalVisible(false)}
+      >
+        <View style={styles.modalBackground}>
+          <Animated.View style={[styles.modalContainer, { transform: [{ scale: modalScale }] }]}>
+            <Text style={styles.modalTitle}>¡Inicio de sesión exitoso!</Text>
+            <TouchableOpacity onPress={closeModal} style={styles.modalButton}>
+              <Text style={styles.modalButtonText}>Continuar</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 }
@@ -252,15 +292,39 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
   },
-  btn: {
-  backgroundColor: '#ff9800',
-  color: 'black',
-  paddingVertical: 12,
-  paddingHorizontal: 20,
-  borderRadius: 8,
-  textAlign: 'center',
-  fontSize: 16,
-  fontWeight: 'bold',
-},
-
+  modalBackground: {
+    flex:1,
+    backgroundColor:'rgba(0,0,0,0.6)',
+    justifyContent:'center',
+    alignItems:'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fffde7',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: '#ffb300',
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 30,
+    width: 300,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#ff9800',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#ffb300',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 15,
+  },
+  modalButtonText: {
+    fontWeight: '900',
+    fontSize: 18,
+    color: '#4a2700',
+  },
 });
