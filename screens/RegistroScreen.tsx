@@ -1,16 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, TextInput, TouchableOpacity, Text, StyleSheet,
-  ActivityIndicator, ImageBackground, Animated, Image
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ImageBackground, Animated, Image, ActivityIndicator,
 } from 'react-native';
 
-interface LoginScreenProps {
-  navigation: any;
-}
-
-export default function LoginScreen({ navigation }: LoginScreenProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const RegistroScreen = ({ navigation }: any) => {
+    const [usuario, setUsuario] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [contrasena, setContrasena] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,51 +48,61 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-10deg', '10deg'],  // ligero balanceo para mayor dinamismo
+    outputRange: ['-10deg', '10deg'],
   });
 
-  const handleFakeLogin = () => {
+  const manejarRegistro = () => {
     setError('');
-    if (!email.trim() || !password.trim()) {
+    if (!correo.trim() || !contrasena.trim()) {
       setError('Por favor completa todos los campos.');
       return;
     }
+
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      alert('¡Inicio de sesión simulado con éxito!');
-  
+      alert('Usuario registrado correctamente');
+   
     }, 2000);
   };
 
   return (
     <ImageBackground
-   //   source={require('../assets/imagenes/fondo.jpg')} 
+     
+      source={{ uri: 'https://media.indiedb.com/images/games/1/61/60262/Flappy_Bird_XMas_icon.1.png' }}
       style={styles.img}
       imageStyle={{ opacity: 0.9 }}
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>¡Bienvenido a Flappy Bart!</Text>
+          <Text style={styles.title}>¡Crea tu cuenta!</Text>
 
           <Animated.View
             style={[
               styles.animatedContainer,
-              { transform: [{ perspective: 1000 }, { rotateZ: spin }, { scale: scaleAnim }] }
+              { transform: [{ perspective: 1000 }, { rotateZ: spin }, { scale: scaleAnim }] },
             ]}
           >
             <Image
-              source={require('../assets/imagenes/logo.png')} 
+              source={require('../assets/imagenes/logo.png')}
               style={styles.image}
             />
           </Animated.View>
-
+   <TextInput
+            style={styles.input}
+            placeholder="Usuario"
+            placeholderTextColor="#999"
+            value={contrasena}
+            onChangeText={setUsuario}
+            secureTextEntry
+            editable={!loading}
+          />
           <TextInput
             style={styles.input}
             placeholder="Correo electrónico"
             placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
+            value={correo}
+            onChangeText={setCorreo}
             keyboardType="email-address"
             autoCapitalize="none"
             editable={!loading}
@@ -105,38 +112,38 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             style={styles.input}
             placeholder="Contraseña"
             placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
+            value={contrasena}
+            onChangeText={setContrasena}
             secureTextEntry
             editable={!loading}
           />
 
           {!!error && <Text style={styles.error}>{error}</Text>}
 
-          <TouchableOpacity onPress={() => navigation.navigate('Drawer')}>
-          <Text style={styles.btn}>Iniciar Sesion</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={manejarRegistro}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="large" />
+            ) : (
+              <Text style={styles.buttonText}>Registrarse</Text>
+            )}
           </TouchableOpacity>
 
-          
-
           <TouchableOpacity
-            onPress={() => navigation.navigate('Registro')}
+            onPress={() => navigation.navigate('Login')}
             disabled={loading}
           >
-            <Text style={styles.link}>¿No tienes cuenta? Regístrate</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Restablecer')}
-            disabled={loading}
-          >
-            <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
+            <Text style={styles.link}>¿Ya tienes cuenta? Inicia sesión</Text>
           </TouchableOpacity>
         </View>
       </View>
     </ImageBackground>
   );
-}
+};
 
 const styles = StyleSheet.create({
   img: {
@@ -145,7 +152,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(25, 120, 230, 0.85)', 
+    backgroundColor: 'rgba(25, 120, 230, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 15,
@@ -156,7 +163,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
     borderRadius: 30,
     borderWidth: 3,
-    borderColor: '#ffc107', 
+    borderColor: '#ffc107',
     alignItems: 'center',
     paddingVertical: 40,
     paddingHorizontal: 30,
@@ -166,7 +173,7 @@ const styles = StyleSheet.create({
     elevation: 40,
   },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '900',
     color: '#ff9800',
     marginBottom: 30,
@@ -252,15 +259,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
   },
-  btn: {
-  backgroundColor: '#ff9800',
-  color: 'black',
-  paddingVertical: 12,
-  paddingHorizontal: 20,
-  borderRadius: 8,
-  textAlign: 'center',
-  fontSize: 16,
-  fontWeight: 'bold',
-},
-
 });
+
+export default RegistroScreen;

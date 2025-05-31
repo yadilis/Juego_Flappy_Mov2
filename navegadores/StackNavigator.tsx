@@ -6,28 +6,34 @@ import LoginScreen from '../screens/LoginScreen';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import TablaPuntuacion from '../screens/TablaPuntuacion';
 import PerfilUsuario from '../screens/PerfilUsuario';
+import RegistroScreen from '../screens/RegistroScreen';
+import GameStartScreen from '../screens/GameScreen';
 
-const Drawer = createDrawerNavigator()
-const Stack = createStackNavigator();
-function MyDrawer(){
-    return(
-        <Drawer.Navigator initialRouteName='PerfilUsuario'>
-            <Drawer.Screen name="TablaPuntuacion" component={TablaPuntuacion} />
-            <Drawer.Screen name="PerfilUsuario" component={PerfilUsuario} />
-        </Drawer.Navigator>
-    )
+
+const Drawer = createDrawerNavigator();
+
+function MyDrawer() {
+  return (
+    <Drawer.Navigator initialRouteName="Game">
+      <Drawer.Screen name="TablaPuntuacion" component={TablaPuntuacion} />
+      <Drawer.Screen name="PerfirUsuario" component={PerfilUsuario} />
+         <Drawer.Screen name="Game" component={GameStartScreen} />
+    </Drawer.Navigator>
+  );
 }
+
+const Stack = createStackNavigator();  
 
 export default function Navegador() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Welcome"screenOptions={{ headerShown: false,}}>
+      <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name='Drawer' component={MyDrawer}/>
+        <Stack.Screen name="Registro" component={RegistroScreen} />
+
+        <Stack.Screen name="Drawer" component={MyDrawer} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-
-
