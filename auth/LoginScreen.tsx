@@ -1,8 +1,10 @@
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, TextInput, TouchableOpacity, Text, StyleSheet,
   ActivityIndicator, ImageBackground, Animated, Image, Modal
 } from 'react-native';
+import { auth } from '../firebase/Config';
 
 interface LoginScreenProps {
   navigation: any;
@@ -65,21 +67,45 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-10deg', '10deg'],  
+    outputRange: ['-10deg', '10deg'],
   });
 
-  const handleFakeLogin = () => {
+  function login() {
     setError('');
     if (!email.trim() || !password.trim()) {
       setError('Por favor completa todos los campos.');
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccessModalVisible(true);
-    }, 2000);
-  };
+    signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        const user = userCredential.user;
+        console.log('Usuario autenticado:', user.email);
+        setLoading(false);
+        setSuccessModalVisible(true);
+      })
+      .catch((error) => {
+        setLoading(false);
+        setError('Error al iniciar sesión: ' + error.message);
+      });
+  }
+
+  function restablecer() {
+    if (!email.trim()) {
+      setError('Por favor ingresa tu correo electrónico.');
+      return;
+    }
+
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+        setError('');
+        alert('Correo de restablecimiento enviado a ' + email);
+      })
+      .catch((error) => {
+        setError('Error al enviar el correo: ' + error.message);
+      });
+  }
 
   const closeModal = () => {
     setSuccessModalVisible(false);
@@ -87,10 +113,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   };
 
   return (
-    <ImageBackground
-      style={styles.img}
-      imageStyle={{ opacity: 0.9 }}
-    >
+    <ImageBackground style={styles.img} imageStyle={{ opacity: 0.9 }}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Text style={styles.title}>¡Bienvenido a Flappy Bart!</Text>
@@ -102,7 +125,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             ]}
           >
             <Image
-              source={require('../assets/imagenes/logo.png')} 
+              source={require('../assets/imagenes/logo.png')}
               style={styles.image}
             />
           </Animated.View>
@@ -132,33 +155,26 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleFakeLogin}
+            onPress={login}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#4a2700" />
             ) : (
-              <Text style={styles.buttonText}>Iniciar Sesion</Text>
+              <Text style={styles.buttonText}>Iniciar Sesión</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Registro')}
-            disabled={loading}
-          >
+          <TouchableOpacity onPress={() => navigation.navigate('Registro')} disabled={loading}>
             <Text style={styles.link}>¿No tienes cuenta? Regístrate</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Restablecer')}
-            disabled={loading}
-          >
+          <TouchableOpacity onPress={restablecer} disabled={loading}>
             <Text style={styles.link}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Modal de éxito */}
       <Modal
         transparent
         visible={successModalVisible}
@@ -185,7 +201,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(25, 120, 230, 0.85)', 
+    backgroundColor: 'rgba(25, 120, 230, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 15,
@@ -196,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
     borderRadius: 30,
     borderWidth: 3,
-    borderColor: '#ffc107', 
+    borderColor: '#ffc107',
     alignItems: 'center',
     paddingVertical: 40,
     paddingHorizontal: 30,
@@ -293,10 +309,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   modalBackground: {
-    flex:1,
-    backgroundColor:'rgba(0,0,0,0.6)',
-    justifyContent:'center',
-    alignItems:'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContainer: {
     backgroundColor: '#fffde7',

@@ -2,11 +2,11 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import WelcomeScreen from '../screens/WelcomeScreen';
-import LoginScreen from '../screens/LoginScreen';
+import LoginScreen from '../auth/LoginScreen';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import TablaPuntuacion from '../screens/TablaPuntuacion';
 import PerfilUsuario from '../screens/PerfilUsuario';
-import RegistroScreen from '../screens/RegistroScreen';
+import RegistroScreen from '../auth/RegistroScreen';
 import GameStartScreen from '../screens/GameScreen';
 
 

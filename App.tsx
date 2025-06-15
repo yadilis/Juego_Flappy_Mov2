@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
-import Navegador from './navegadores/StackNavigator';
+import Navegador from './navigation/StackNavigator';
 
 export default function App() {
   return (
