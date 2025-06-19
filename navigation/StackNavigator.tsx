@@ -6,8 +6,9 @@ import LoginScreen from '../auth/LoginScreen';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import TablaPuntuacion from '../screens/TablaPuntuacion';
 import PerfilUsuario from '../screens/PerfilUsuario';
-import RegistroScreen from '../auth/RegistroScreen';
+
 import GameStartScreen from '../screens/GameScreen';
+import RegistroScreen from '../auth/RegistroScreen';
 
 
 const Drawer = createDrawerNavigator();
