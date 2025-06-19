@@ -1,16 +1,12 @@
-import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, TextInput, TouchableOpacity, Text, StyleSheet,
   ActivityIndicator, ImageBackground, Animated, Image, Modal
 } from 'react-native';
-import { auth } from '../firebase/Config';
+import { supabase } from '../firebase/ConfigSupa';
 
-interface LoginScreenProps {
-  navigation: any;
-}
 
-export default function LoginScreen({ navigation }: LoginScreenProps) {
+export default function LoginScreen({ navigation }:any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +66,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     outputRange: ['-10deg', '10deg'],
   });
 
-  function login() {
+  const login = async () => {
     setError('');
     if (!email.trim() || !password.trim()) {
       setError('Por favor completa todos los campos.');
@@ -78,34 +74,31 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     }
 
     setLoading(true);
-    signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        console.log('Usuario autenticado:', user.email);
-        setLoading(false);
-        setSuccessModalVisible(true);
-      })
-      .catch((error) => {
-        setLoading(false);
-        setError('Error al iniciar sesión: ' + error.message);
-      });
-  }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  function restablecer() {
+    if (error) {
+      setLoading(false);
+      setError('Error al iniciar sesión: ' + error.message);
+    } else {
+      setLoading(false);
+      setSuccessModalVisible(true);
+    }
+  };
+
+  const restablecer = async () => {
     if (!email.trim()) {
       setError('Por favor ingresa tu correo electrónico.');
       return;
     }
 
-    sendPasswordResetEmail(auth, email)
-      .then(() => {
-        setError('');
-        alert('Correo de restablecimiento enviado a ' + email);
-      })
-      .catch((error) => {
-        setError('Error al enviar el correo: ' + error.message);
-      });
-  }
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
+      setError('Error al enviar el correo: ' + error.message);
+    } else {
+      setError('');
+      alert('Correo de restablecimiento enviado a ' + email);
+    }
+  };
 
   const closeModal = () => {
     setSuccessModalVisible(false);

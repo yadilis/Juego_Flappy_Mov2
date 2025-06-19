@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, ScrollView, ImageBackground, Animated, Image,
+  ActivityIndicator, ScrollView, ImageBackground
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { ref, set } from 'firebase/database';
-import { auth, db } from '../firebase/Config';
+import { supabase } from '../firebase/ConfigSupa';
 
 const RegistroScreen = ({ navigation }: any) => {
   const [usuario, setUsuario] = useState('');
@@ -22,8 +20,20 @@ const RegistroScreen = ({ navigation }: any) => {
   const registro = async () => {
     setError('');
 
-    if (!usuario.trim() || !edad.trim() || !correo.trim() || !contrasena.trim() || !confirmarContrasena.trim()) {
+    // Validaciones
+    if (
+      !usuario.trim() || !edad.trim() || !correo.trim() ||
+      !contrasena.trim() || !confirmarContrasena.trim() ||
+      !genero.trim() || !experiencia.trim()
+    ) {
       setError('Por favor completa todos los campos.');
+      return;
+    }
+
+    // Validar email con regex simple
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(correo)) {
+      setError('Por favor ingresa un correo electrónico válido.');
       return;
     }
 
@@ -32,30 +42,51 @@ const RegistroScreen = ({ navigation }: any) => {
       return;
     }
 
+    // Validar edad numérica y positiva
+    const edadNumber = Number(edad);
+    if (isNaN(edadNumber) || edadNumber <= 0) {
+      setError('Por favor ingresa una edad válida.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-     
-      const userCredential = await createUserWithEmailAndPassword(auth, correo, contrasena);
-      const user = userCredential.user;
-
-      //  Guardar info extra en Realtime Database
-      await set(ref(db, 'usuarios/' + user.uid), {
-     
-        usuario,
-        edad,
-        correo,
-        genero,
-        experiencia,
-        
+      // Registro en Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: correo,
+        password: contrasena,
       });
 
-      setLoading(false);
+      if (signUpError) throw signUpError;
+
+      const user = data.user;
+      const userId = user?.id;
+
+      // Insertar datos adicionales en tabla usuarios
+      const { error: insertError } = await supabase
+        .from('perfil_usuarios')
+        .insert([
+          {
+            id: userId,
+            usuario,
+            edad: edadNumber,
+            correo,
+            genero,
+            experiencia,
+          },
+        ]);
+
+      if (insertError) throw insertError;
+
       alert('Usuario registrado correctamente');
       navigation.navigate('Login');
+
     } catch (error: any) {
+      const message = error?.message || String(error);
+      setError('Error al registrar: ' + message);
+    } finally {
       setLoading(false);
-      setError('Error al registrar: ' + error.message);
     }
   };
 
@@ -71,59 +102,48 @@ const RegistroScreen = ({ navigation }: any) => {
 
           <TextInput
             style={styles.input}
-            placeholder="Usuario"
-            placeholderTextColor="#999"
+            placeholder="Nombre de usuario"
             value={usuario}
             onChangeText={setUsuario}
-            editable={!loading}
           />
 
           <TextInput
             style={styles.input}
             placeholder="Edad"
-            placeholderTextColor="#999"
+            keyboardType="numeric"
             value={edad}
             onChangeText={setEdad}
-            keyboardType="numeric"
-            editable={!loading}
           />
 
           <TextInput
             style={styles.input}
             placeholder="Correo electrónico"
-            placeholderTextColor="#999"
-            value={correo}
-            onChangeText={setCorreo}
             keyboardType="email-address"
             autoCapitalize="none"
-            editable={!loading}
+            value={correo}
+            onChangeText={setCorreo}
           />
 
           <TextInput
             style={styles.input}
             placeholder="Contraseña"
-            placeholderTextColor="#999"
+            secureTextEntry
             value={contrasena}
             onChangeText={setContrasena}
-            secureTextEntry
-            editable={!loading}
           />
 
           <TextInput
             style={styles.input}
-            placeholder="Confirmar Contraseña"
-            placeholderTextColor="#999"
+            placeholder="Confirmar contraseña"
+            secureTextEntry
             value={confirmarContrasena}
             onChangeText={setConfirmarContrasena}
-            secureTextEntry
-            editable={!loading}
           />
 
           <Picker
             selectedValue={genero}
-            onValueChange={setGenero}
-            enabled={!loading}
             style={styles.picker}
+            onValueChange={(itemValue) => setGenero(itemValue)}
           >
             <Picker.Item label="Selecciona tu género" value="" />
             <Picker.Item label="Masculino" value="masculino" />
@@ -133,14 +153,12 @@ const RegistroScreen = ({ navigation }: any) => {
 
           <Picker
             selectedValue={experiencia}
-            onValueChange={setExperiencia}
-            enabled={!loading}
             style={styles.picker}
+            onValueChange={(itemValue) => setExperiencia(itemValue)}
           >
-            <Picker.Item label="Nivel de experiencia" value="" />
-            <Picker.Item label="Principiante" value="principiante" />
-            <Picker.Item label="Intermedio" value="intermedio" />
-            <Picker.Item label="Avanzado" value="avanzado" />
+            <Picker.Item label="¿Has jugado antes?" value="" />
+            <Picker.Item label="Sí" value="si" />
+            <Picker.Item label="No" value="no" />
           </Picker>
 
           {!!error && <Text style={styles.error}>{error}</Text>}
