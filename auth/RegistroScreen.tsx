@@ -4,7 +4,7 @@ import {
   ActivityIndicator, ScrollView, ImageBackground
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { supabase } from '../firebase/ConfigSupa';
+import { supabase } from '../Supabase/ConfigSupa';
 
 const RegistroScreen = ({ navigation }: any) => {
   const [usuario, setUsuario] = useState('');

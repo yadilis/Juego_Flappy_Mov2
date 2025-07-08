@@ -7,24 +7,21 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import atob from 'atob';
 
-import { supabase } from '../firebase/ConfigSupa';
+import { supabase } from '../Supabase/ConfigSupa';
 import { User } from '@supabase/supabase-js';
 import { LinearGradient } from 'expo-linear-gradient';
 
-
-
 const { width } = Dimensions.get('window');
 
-interface NavigationProp {
-  navigate: (screen: string) => void;
-  addListener?: (event: string, callback: () => void) => () => void;
+// Tipos simples
+interface Props {
+  navigation: {
+    navigate: (screen: string) => void;
+  };
 }
 
-interface PerfilUsuarioProps {
-  navigation: NavigationProp;
-}
-
-export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
+export default function PerfilUsuario({ navigation }: Props) {
+  // Estados básicos
   const [usuario, setUsuario] = useState<string>('');
   const [edad, setEdad] = useState<number | null>(null);
   const [correo, setCorreo] = useState<string>('');
@@ -36,34 +33,39 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
   const [imagen, setImagen] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [subiendoImagen, setSubiendoImagen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [creandoPerfil, setCreandoPerfil] = useState<boolean>(false);
 
+  // Cuando se carga el componente
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    inicializarUsuario();
+  }, []);
+
+  // Función para inicializar usuario
+  const inicializarUsuario = async (): Promise<void> => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error obteniendo sesión:', error);
+        setLoading(false);
+        return;
+      }
+
       if (data.session) {
         setCurrentUser(data.session.user);
-        cargarDatosUsuario(data.session.user.id);
+        await cargarDatosUsuario(data.session.user.id);
       } else {
         setLoading(false);
         navigation.navigate('Login');
       }
-    });
+    } catch (error) {
+      console.error('Error inicializando usuario:', error);
+      setLoading(false);
+    }
+  };
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setCurrentUser(session.user);
-        cargarDatosUsuario(session.user.id);
-      } else {
-        setCurrentUser(null);
-        navigation.navigate('Login');
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
-
-  async function cargarDatosUsuario(userId: string) {
+  // Función para cargar datos del usuario
+  const cargarDatosUsuario = async (userId: string): Promise<void> => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -72,103 +74,231 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error && error.code === 'PGRST116') {
+        // No existe el perfil, crear uno nuevo
+        console.log('Perfil no encontrado, creando...');
+        await crearPerfil(userId);
+        return;
+      } else if (error) {
+        throw error;
+      }
 
       if (data) {
+        // Cargar datos en los estados
         setUsuario(data.usuario || '');
         setEdad(data.edad || null);
         setCorreo(data.correo || '');
         setGenero(data.genero || '');
         setExperiencia(data.experiencia || '');
-        setAvatarUri(data.avatar_uri || '');
+        
+        if (data.avatar_url) {
+          console.log('Avatar cargado:', data.avatar_url);
+          setAvatarUri(data.avatar_url);
+        } else {
+          console.log('No hay avatar');
+          setAvatarUri('');
+        }
       }
     } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar los datos del perfil');
+      Alert.alert('Error', 'No se pudieron cargar los datos');
       console.error('Error cargarDatosUsuario:', error.message);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
+  // Función para crear perfil nuevo
+  const crearPerfil = async (userId: string): Promise<void> => {
+    if (creandoPerfil) {
+      console.log('Ya se está creando un perfil...');
+      return;
+    }
+
+    try {
+      setCreandoPerfil(true);
+      
+      if (!userId) {
+        console.error('UserId no válido');
+        return;
+      }
+
+      // Verificar si ya existe
+      const { data: existe } = await supabase
+        .from('perfil_usuarios')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (existe) {
+        console.log('Perfil ya existe, cargando...');
+        await cargarDatosUsuario(userId);
+        return;
+      }
+
+      // Obtener datos del usuario autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const nombreUsuario = user.user_metadata?.full_name || 
+                             user.email?.split('@')[0] || 
+                             'Usuario';
+        
+        console.log('Creando perfil para:', userId);
+        
+        // Crear perfil con UPSERT
+        const { data, error } = await supabase
+          .from('perfil_usuarios')
+          .upsert([
+            {
+              id: userId,
+              usuario: nombreUsuario,
+              correo: user.email || '',
+              edad: null,
+              genero: '',
+              experiencia: 'Novato',
+              avatar_url: null
+            }
+          ], {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          })
+          .select()
+          .single();
+
+        if (error) {
+          if (!error.message.includes('duplicate key value')) {
+            console.error('Error creando perfil:', error);
+            throw error;
+          } else {
+            console.log('Perfil ya existía');
+            await cargarDatosUsuario(userId);
+            return;
+          }
+        }
+
+        if (data) {
+          console.log('Perfil creado exitosamente');
+          setUsuario(data.usuario || '');
+          setEdad(data.edad || null);
+          setCorreo(data.correo || '');
+          setGenero(data.genero || '');
+          setExperiencia(data.experiencia || '');
+          
+          if (data.avatar_url) {
+            setAvatarUri(data.avatar_url);
+          } else {
+            setAvatarUri('');
+          }
+        }
+      }
+    } catch (error: any) {
+      if (!error.message?.includes('duplicate key value')) {
+        console.error('Error creando perfil:', error.message);
+      } else {
+        console.log('El perfil ya existe');
+      }
+    } finally {
+      setCreandoPerfil(false);
+    }
+  };
+
+  // Función para obtener avatar
   const obtenerAvatar = (): string => {
-    if (imagen?.uri) return imagen.uri;
-    if (avatarUri) return avatarUri;
+    if (imagen?.uri) {
+      return imagen.uri;
+    }
+    if (avatarUri) {
+      return avatarUri;
+    }
+    
     const nombre = encodeURIComponent(usuario || 'Usuario');
     return `https://ui-avatars.com/api/?name=${nombre}&background=FFD700&color=333&size=160&bold=true`;
   };
 
-  const requestGalleryPermissions = async (): Promise<boolean> => {
+  // Función para pedir permisos de galería
+  const pedirPermisosGaleria = async (): Promise<boolean> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permisos necesarios', 'Se necesitan permisos para acceder a la galería de fotos.');
+      Alert.alert('Permisos necesarios', 'Se necesitan permisos para la galería');
       return false;
     }
     return true;
   };
 
-  const requestCameraPermissions = async (): Promise<boolean> => {
+  // Función para pedir permisos de cámara
+  const pedirPermisosCamara = async (): Promise<boolean> => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permisos necesarios', 'Se necesitan permisos para acceder a la cámara.');
+      Alert.alert('Permisos necesarios', 'Se necesitan permisos para la cámara');
       return false;
     }
     return true;
   };
 
-  const pickImage = async (): Promise<void> => {
+  // Función para seleccionar imagen de galería
+  const seleccionarImagen = async (): Promise<void> => {
     setModalVisible(false);
-    const hasPermission = await requestGalleryPermissions();
-    if (!hasPermission) return;
+    const tienePermisos = await pedirPermisosGaleria();
+    if (!tienePermisos) return;
 
     try {
-      let result = await ImagePicker.launchImageLibraryAsync({
+      let resultado = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImagen(result.assets[0]);
+      if (!resultado.canceled && resultado.assets && resultado.assets.length > 0) {
+        console.log('Imagen seleccionada');
+        setImagen(resultado.assets[0]);
       }
     } catch (error) {
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      console.error('Error seleccionarImagen:', error);
     }
   };
 
-  const takePhoto = async (): Promise<void> => {
+  // Función para tomar foto
+  const tomarFoto = async (): Promise<void> => {
     setModalVisible(false);
-    const hasPermission = await requestCameraPermissions();
-    if (!hasPermission) return;
+    const tienePermisos = await pedirPermisosCamara();
+    if (!tienePermisos) return;
 
     try {
-      let result = await ImagePicker.launchCameraAsync({
+      let resultado = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImagen(result.assets[0]);
+      if (!resultado.canceled && resultado.assets && resultado.assets.length > 0) {
+        console.log('Foto tomada');
+        setImagen(resultado.assets[0]);
       }
     } catch (error) {
       Alert.alert('Error', 'No se pudo tomar la foto');
+      console.error('Error tomarFoto:', error);
     }
   };
 
-  const uploadImage = async (): Promise<void> => {
+  // Función para subir imagen - CORREGIDA
+  const subirImagen = async (): Promise<void> => {
     if (!currentUser || !imagen) {
-      Alert.alert('Error', 'No hay usuario autenticado o imagen seleccionada');
+      Alert.alert('Error', 'No hay usuario o imagen');
       return;
     }
 
     setSubiendoImagen(true);
+    console.log('Subiendo imagen...');
 
     try {
+      // Leer imagen como base64
       const base64 = await FileSystem.readAsStringAsync(imagen.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
+      // Convertir a bytes
       const binaryString = atob(base64);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
@@ -176,56 +306,77 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
+      // Crear nombre único
       const timestamp = Date.now();
       const userId = currentUser.id;
       const randomId = Math.random().toString(36).substring(2, 8);
-      const nombreUnico = `avatar_${userId}_${timestamp}_${randomId}.png`;
+      const nombreArchivo = `avatar_${userId}_${timestamp}_${randomId}.png`;
 
-      const { error: uploadError } = await supabase.storage
+      console.log('Subiendo archivo:', nombreArchivo);
+
+      // Subir a Storage
+      const { error: errorSubida } = await supabase.storage
         .from('imagenes')
-        .upload(`avatars/${nombreUnico}`, bytes, {
+        .upload(`avatars/${nombreArchivo}`, bytes, {
           cacheControl: '3600',
           upsert: false,
           contentType: 'image/png',
         });
 
-      if (uploadError) throw uploadError;
+      if (errorSubida) {
+        console.error('Error subiendo:', errorSubida);
+        throw errorSubida;
+      }
 
+      console.log('Imagen subida exitosamente');
+
+      // Obtener URL pública
       const { data } = supabase.storage
         .from('imagenes')
-        .getPublicUrl(`avatars/${nombreUnico}`);
+        .getPublicUrl(`avatars/${nombreArchivo}`);
 
-      const publicUrl = data.publicUrl;
+      const urlPublica = data.publicUrl;
+      console.log('URL generada:', urlPublica);
 
-      const { error: updateError } = await supabase
+      // CORRECCIÓN: Usar UPDATE en lugar de UPSERT
+      const { error: errorActualizar } = await supabase
         .from('perfil_usuarios')
-        .update({ avatar_uri: publicUrl })
+        .update({ avatar_url: urlPublica })
         .eq('id', userId);
 
-      if (updateError) throw updateError;
+      if (errorActualizar) {
+        console.error('Error guardando URL:', errorActualizar);
+        throw errorActualizar;
+      }
 
-      setAvatarUri(publicUrl);
+      console.log('URL guardada en base de datos');
+
+      // Actualizar estado local
+      setAvatarUri(urlPublica);
       setImagen(null);
-      Alert.alert('¡Genial! 🎉', 'Tu foto de perfil se actualizó correctamente');
+
+      Alert.alert('¡Genial! 🎉', 'Foto actualizada correctamente');
 
     } catch (error: any) {
-      Alert.alert('¡Ups! 😅', 'No se pudo subir la imagen, inténtalo de nuevo');
-      console.error('uploadImage error:', error.message);
+      console.error('Error en subirImagen:', error);
+      Alert.alert('Error', 'No se pudo subir la imagen');
     } finally {
       setSubiendoImagen(false);
     }
   };
 
+  // Función para cerrar sesión
   const cerrarSesion = async (): Promise<void> => {
     try {
       await supabase.auth.signOut();
       navigation.navigate('Login');
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cerrar la sesión');
-      console.error('cerrarSesion error:', error);
+      Alert.alert('Error', 'No se pudo cerrar sesión');
+      console.error('Error cerrarSesion:', error);
     }
   };
 
+  // Pantalla de carga
   if (loading) {
     return (
       <LinearGradient
@@ -241,6 +392,7 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
     );
   }
 
+  // Pantalla principal
   return (
     <LinearGradient
       colors={['#87CEEB', '#98D8E8', '#B8E6F0']}
@@ -248,7 +400,7 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
     >
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         
-        {/* Header con nubes decorativas */}
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Mi Perfil 🐦</Text>
           <View style={styles.cloudsContainer}>
@@ -258,10 +410,14 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
           </View>
         </View>
 
-        {/* Avatar Section */}
+        {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
-            <Image source={{ uri: obtenerAvatar() }} style={styles.avatar} />
+            <Image 
+              source={{ uri: obtenerAvatar() }} 
+              style={styles.avatar} 
+              onError={(error) => console.log('Error imagen:', error.nativeEvent.error)}
+            />
             <View style={styles.avatarBorder} />
             {imagen && <View style={styles.newImageIndicator} />}
           </View>
@@ -275,7 +431,7 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
 
           {imagen && (
             <TouchableOpacity 
-              onPress={uploadImage}
+              onPress={subirImagen}
               disabled={subiendoImagen}
               style={[styles.uploadButton, subiendoImagen && styles.buttonDisabled]}
             >
@@ -291,7 +447,7 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
           )}
         </View>
 
-        {/* User Info Card */}
+        {/* Información del usuario */}
         <View style={styles.userCard}>
           <Text style={styles.username}>{usuario || 'Jugador'}</Text>
           <Text style={styles.email}>{correo}</Text>
@@ -317,25 +473,39 @@ export default function PerfilUsuario({ navigation }: PerfilUsuarioProps) {
           </View>
         </View>
 
-  
+        {/* Botones */}
+        <View style={styles.actionsContainer}>
+          
+          <TouchableOpacity 
+            onPress={cerrarSesion}
+            style={styles.logoutButton}
+          >
+            <Text style={styles.logoutText}>🚪 Cerrar Sesión</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Decoración */}
+        <View style={styles.ground}>
+          <Text style={styles.grassEmoji}>🌱🌿🌱🌿🌱</Text>
+        </View>
     
       </ScrollView>
 
-      {/* Modal Mejorado */}
+      {/* Modal para seleccionar imagen */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>📷 Cambiar Foto de Perfil</Text>
             <Text style={styles.modalSubtitle}>¿Cómo quieres obtener tu nueva foto?</Text>
 
-            <TouchableOpacity onPress={pickImage} style={styles.modalButton}>
+            <TouchableOpacity onPress={seleccionarImagen} style={styles.modalButton}>
               <View style={styles.modalButtonContent}>
                 <Text style={styles.modalButtonEmoji}>🖼️</Text>
                 <Text style={styles.modalButtonText}>Galería</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={takePhoto} style={styles.modalButton}>
+            <TouchableOpacity onPress={tomarFoto} style={styles.modalButton}>
               <View style={styles.modalButtonContent}>
                 <Text style={styles.modalButtonEmoji}>📸</Text>
                 <Text style={styles.modalButtonText}>Cámara</Text>

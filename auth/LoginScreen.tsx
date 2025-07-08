@@ -3,7 +3,7 @@ import {
   View, TextInput, TouchableOpacity, Text, StyleSheet,
   ActivityIndicator, ImageBackground, Animated, Image, Modal
 } from 'react-native';
-import { supabase } from '../firebase/ConfigSupa';
+import { supabase } from '../Supabase/ConfigSupa';
 
 
 export default function LoginScreen({ navigation }:any) {

@@ -471,9 +471,6 @@ export default function WelcomeScreen({ navigation }:any) {
               </TouchableOpacity>
             </Animated.View>
 
-            <TouchableOpacity style={styles.howToPlayButton} activeOpacity={0.7}>
-              <Text style={styles.howToPlayText}>✨ ¿Cómo jugar? ✨</Text>
-            </TouchableOpacity>
           </View>
         </ImageBackground>
       </Animated.View>
