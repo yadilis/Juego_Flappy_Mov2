@@ -4,7 +4,7 @@
     "slug": "app-flappy_bird",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icino_flappy.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -17,14 +17,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icino_flappy.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.cermen.appflappy_bird"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icino_flappy.png"
     },
     "extra": {
       "eas": {
